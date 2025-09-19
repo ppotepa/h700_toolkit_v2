@@ -1,0 +1,13 @@
+titles:
+  main: "V2 Flash Toolkit"
+  pick_repo: "Select Kernel Repository"
+  flash_confirm: "Confirm Flash Target"
+  adjust_intro: "Boot.img / RootFS Adjuster"
+warnings:
+  destructive: "This action writes to a block device. Proceed only if you have a backup."
+  size_mismatch: "New boot.img exceeds boot partition size."
+actions:
+  proceed: "Proceed"
+  back: "Back"
+  view_log: "View log"
+  open_docs: "Open docs"

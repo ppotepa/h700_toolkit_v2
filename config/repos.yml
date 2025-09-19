@@ -1,0 +1,13 @@
+repos:
+  - name: anbernic/h700-linux
+    url: https://github.com/anbernic/h700-linux
+    desc: Allwinner H700 A64 family tree + RG35XX H tweaks
+  - name: community/h700-kernel-tuned
+    url: https://github.com/community/h700-kernel-tuned
+    desc: Community tuned kernel for H700
+  - name: forks/grzegorz/rx28-disp-panel
+    url: https://github.com/grzegorz/rx28-disp-panel
+    desc: Fork with display panel fixes
+  - name: forks/karol/h700-exp-dma
+    url: https://github.com/karol/h700-exp-dma
+    desc: Experimental DMA support

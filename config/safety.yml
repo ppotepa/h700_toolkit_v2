@@ -1,0 +1,4 @@
+guardrails:
+  - check_root: true
+  - confirm_destructive: true
+  - backup_required: true

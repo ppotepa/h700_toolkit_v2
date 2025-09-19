@@ -1,0 +1,8 @@
+devices:
+  - name: RG35XX-H
+    soc: Allwinner H700
+    page_size: 2048
+    base: 0x40000000
+    dtb_mode: with-dt
+    boot_part: /dev/sdb4
+    rootfs_part: /dev/sdb5

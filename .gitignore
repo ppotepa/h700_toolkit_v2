@@ -1,0 +1,7 @@
+logs/
+backups/
+work/
+.state.json
+*.log
+*.img.zst
+*.img
