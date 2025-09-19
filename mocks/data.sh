@@ -12,6 +12,41 @@ mock_repos=(
     "forks/karol/h700-exp-dma|https://github.com/karol/h700-exp-dma|Experimental DMA support"
 )
 
+# get_repos_list - Returns list of repository names
+get_repos_list() {
+    for repo in "${mock_repos[@]}"; do
+        echo "${repo%%|*}"  # Extract name before first |
+    done
+}
+
+# get_repo_info "repo_name" "field" - Returns repository information
+get_repo_info() {
+    local repo_name="$1"
+    local field="$2"
+
+    for repo in "${mock_repos[@]}"; do
+        local name url desc
+        IFS='|' read -r name url desc <<< "$repo"
+        if [[ "$name" == "$repo_name" ]]; then
+            case "$field" in
+                "url")
+                    echo "$url"
+                    return 0
+                    ;;
+                "desc")
+                    echo "$desc"
+                    return 0
+                    ;;
+                *)
+                    echo "$repo"
+                    return 0
+                    ;;
+            esac
+        fi
+    done
+    return 1
+}
+
 # Mock branches/tags for a repository
 # mock_refs "repo_name" -> returns array of refs
 mock_refs() {

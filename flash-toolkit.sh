@@ -37,7 +37,7 @@ discover_wizards() {
     log "Discovering available wizards" "DEBUG"
 
     AVAILABLE_WIZARDS=(
-        "kernel-build:Kernel Build"
+        "kernel_build:Kernel Build"
         "flash:Flash Image"
         "bootimg_adjust:Boot.img / RootFS Adjuster"
         "backup_restore:Backup / Restore"
@@ -57,9 +57,48 @@ discover_steps() {
     # Clear previous steps
     WIZARD_STEPS=()
 
-    # Find all step files for this wizard
+    # Convert wizard name to directory name (handle different naming conventions)
+    local wizard_subdir=""
+    case "$wizard" in
+        "kernel_build")
+            wizard_subdir="kernel-build"
+            ;;
+        "flash")
+            wizard_subdir="flash"
+            ;;
+        "bootimg_adjust")
+            wizard_subdir="bootimg_adjust"
+            ;;
+        "backup_restore")
+            wizard_subdir="backup_restore"
+            ;;
+        *)
+            wizard_subdir="$wizard"
+            ;;
+    esac
+
+    local target_dir="$wizard_dir/$wizard_subdir"
+
+    # Check if wizard directory exists
+    if [[ ! -d "$target_dir" ]]; then
+        log "Wizard directory not found: $target_dir" "ERROR"
+        return 1
+    fi
+
+    # Source the wizard orchestrator file if it exists
+    local orchestrator_file="$wizard_dir/${wizard//-/_}.sh"
+    if [[ -f "$orchestrator_file" ]]; then
+        log "Loading wizard orchestrator: $orchestrator_file" "DEBUG"
+        source "$orchestrator_file"
+    else
+        log "Wizard orchestrator not found: $orchestrator_file" "WARN"
+    fi
+
+    # Find all step files for this wizard in its subdirectory
     local step_files
-    mapfile -t step_files < <(find "$wizard_dir" -name "*__*.sh" -type f | sort)
+    mapfile -t step_files < <(find "$target_dir" -name "*__*.sh" -type f | sort)
+
+    log "Found ${#step_files[@]} step files in $target_dir" "DEBUG"
 
     # Parse step IDs and sort them
     local step_ids=()
@@ -75,6 +114,7 @@ discover_steps() {
         if [[ "$step_id" =~ ^[0-9]+(-[0-9]+)*$ ]]; then
             step_ids+=("$step_id")
             step_paths+=("$step_file")
+            log "Found step: $step_id -> $step_file" "DEBUG"
         else
             log "Invalid step ID format: $step_id in $filename" "WARN"
         fi
@@ -93,10 +133,10 @@ discover_steps() {
         local step_id="${step_ids[$idx]}"
         local step_path="${step_paths[$idx]}"
         WIZARD_STEPS["$step_id"]="$step_path"
-        log "Found step: $step_id -> $step_path" "DEBUG"
+        log "Registered step: $step_id -> $step_path" "DEBUG"
     done
 
-    log "Discovered ${#WIZARD_STEPS[@]} steps for wizard $wizard" "DEBUG"
+    log "Discovered ${#WIZARD_STEPS[@]} steps for wizard $wizard" "INFO"
 }
 
 # run_step "step_id" "wizard_name"
@@ -127,7 +167,24 @@ run_step() {
     source "$step_path"
 
     # The step file should define a function named after the step
-    local step_function="${wizard_name}_${step_id//-/_}"
+    local base_function_name="${wizard_name}_${step_id//-/_}"
+    
+    # Find the actual function name (may have additional suffix)
+    local step_function=""
+    for func in $(declare -F | awk '{print $3}'); do
+        if [[ "$func" == "${base_function_name}"* ]]; then
+            step_function="$func"
+            break
+        fi
+    done
+
+    if [[ -z "$step_function" ]]; then
+        log "Step function not found: $base_function_name*" "ERROR"
+        ui_msgbox "Error" "Step function $base_function_name not defined"
+        return 1
+    fi
+
+    log "Found step function: $step_function" "DEBUG"
 
     if declare -f "$step_function" >/dev/null 2>&1; then
         # Run the step function
@@ -139,8 +196,8 @@ run_step() {
             return 1
         fi
     else
-        log "Step function not found: $step_function" "ERROR"
-        ui_msgbox "Error" "Step function $step_function not defined in $step_path"
+        log "Step function not accessible: $step_function" "ERROR"
+        ui_msgbox "Error" "Step function $step_function not accessible"
         return 1
     fi
 }
@@ -208,6 +265,15 @@ run_wizard() {
 
     # Set current wizard
     CURRENT_WIZARD="$wizard_name"
+
+    # Source the wizard orchestrator file
+    local wizard_file="$TOOLKIT_ROOT/wizards/${wizard_name}.sh"
+    if [[ -f "$wizard_file" ]]; then
+        log "Sourcing wizard orchestrator: $wizard_file" "DEBUG"
+        source "$wizard_file"
+    else
+        log "Wizard orchestrator not found: $wizard_file" "WARN"
+    fi
 
     # Discover steps for this wizard
     discover_steps "$wizard_name"
@@ -342,6 +408,16 @@ handle_goto() {
 
     # Set current wizard and discover steps
     CURRENT_WIZARD="$wizard"
+    
+    # Source the wizard orchestrator file
+    local wizard_file="$TOOLKIT_ROOT/wizards/${wizard}.sh"
+    if [[ -f "$wizard_file" ]]; then
+        log "Sourcing wizard orchestrator: $wizard_file" "DEBUG"
+        source "$wizard_file"
+    else
+        log "Wizard orchestrator not found: $wizard_file" "WARN"
+    fi
+    
     discover_steps "$wizard"
 
     # Validate step exists
@@ -420,8 +496,8 @@ while [[ $# -gt 0 ]]; do
             discover_wizards
             echo "Available wizards:"
             for wizard_info in "${AVAILABLE_WIZARDS[@]}"; do
-                local wizard_id="${wizard_info%%:*}"
-                local wizard_desc="${wizard_info#*:}"
+                wizard_id="${wizard_info%%:*}"
+                wizard_desc="${wizard_info#*:}"
                 echo "  $wizard_id: $wizard_desc"
             done
             exit 0
